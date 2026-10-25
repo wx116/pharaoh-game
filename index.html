@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>走動式冒險RPG：我是大帝法老王！</title>
+  <style>
+    :root {
+      --gold: #f1c40f;
+      --gold-dark: #b7950b;
+      --sand-floor: #fcf3cf;
+      --panel-bg: rgba(254, 249, 231, 0.96);
+      --border-royal: #b7950b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background: radial-gradient(circle at center, #2e1a09 0%, #120903 100%);
+      font-family: 'PingFang TC', 'Microsoft JhengHei', 'Comic Sans MS', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+      color: #2c2518;
+    }
+
+    /* 遊戲主視窗 */
+    .game-console {
+      width: 100%;
+      max-width: 960px;
+      background: #fdfefe;
+      border: 6px solid var(--border-royal);
+      border-radius: 24px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 頂部：法老身份與四項天平數值 */
+    header {
+      background: linear-gradient(180deg, #b7950b 0%, #9a7d0a 100%);
+      padding: 10px 18px;
+      color: #fff;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      gap: 10px;
+    }
+
+    .pharaoh-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+    }
+
+    .age-badge {
+      background: #7d6608;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+    }
+
+    .stats-tray {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: 100%;
+      background: #f9e79f;
+      padding: 8px 16px;
+      border-bottom: 2px solid #d4ac0d;
+    }
+
+    .stat-chip {
+      background: #fff;
+      border: 1.5px solid #d4ac0d;
+      border-radius: 12px;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+
+    .stat-chip .emoji { font-size: 1.3rem; }
+    .stat-progress {
+      flex: 1;
+      height: 8px;
+      background: #ebedef;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .stat-bar { height: 100%; transition: width 0.3s; }
+    .bar-faith { background: #9b59b6; }
+    .bar-people { background: #2ecc71; }
+    .bar-gold { background: #f39c12; }
+    .bar-army { background: #e74c3c; }
+
+    /* 走動式大殿地圖視圖 */
+    .viewport-container {
+      position: relative;
+      width: 100%;
+      height: 480px;
+      background: #fcf3cf;
+      overflow: hidden;
+      border-bottom: 3px solid #b7950b;
+    }
+
+    /* 埃及宮殿地磚風格 */
+    .palace-map {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      background-image: 
+        radial-gradient(#d4ac0d 1px, transparent 1px),
+        repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(183, 149, 11, 0.15) 40px, rgba(183, 149, 11, 0.15) 41px),
+        repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(183, 149, 11, 0.15) 40px, rgba(183, 149, 11, 0.15) 41px);
+      background-size: 20px 20px, 40px 40px, 40px 40px;
+    }
+
+    /* 頂部王座區裝飾 */
+    .throne-dais {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 140px;
+      height: 60px;
+      background: #b7950b;
+      border: 3px solid #7d6608;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    /* 左側：遠眺金字塔巨窗 */
+    .pyramid-balcony {
+      position: absolute;
+      top: 10px;
+      left: 15px;
+      width: 130px;
+      height: 130px;
+      background: linear-gradient(180deg, #85c1e9 0%, #f5b041 80%);
+      border: 4px solid #b7950b;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 6px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+      cursor: pointer;
+    }
+
+    .pyramid-mini-shape {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    .pyr-layer {
+      background: #d35400;
+      border: 1px solid #78281f;
+      margin: 1px 0;
+      border-radius: 2px;
+      transition: all 0.3s;
+    }
+    .pyr-layer.dim { background: rgba(255,255,255,0.3); border-color: rgba(0,0,0,0.1); }
+    .pl-6 { width: 14px; height: 10px; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); background: #ffd700 !important; }
+    .pl-5 { width: 30px; height: 8px; }
+    .pl-4 { width: 50px; height: 8px; }
+    .pl-3 { width: 70px; height: 8px; }
+    .pl-2 { width: 90px; height: 8px; }
+    .pl-1 { width: 110px; height: 10px; }
+
+    /* 法老玩家角色（可移動、有動畫） */
+    .player-actor {
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      transform: translate(-50%, -50%);
+      transition: left 0.15s ease-out, top 0.15s ease-out;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 20;
+      cursor: grab;
+    }
+
+    .player-sprite {
+      font-size: 2.8rem;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+      animation: pharaohWalk 0.6s infinite alternate ease-in-out;
+    }
+
+    @keyframes pharaohWalk {
+      0% { transform: translateY(0) rotate(-3deg); }
+      100% { transform: translateY(-4px) rotate(3deg); }
+    }
+
+    .player-shadow {
+      width: 32px;
+      height: 10px;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 50%;
+      margin-top: -6px;
+    }
+
+    .player-tag {
+      position: absolute;
+      top: -20px;
+      background: #b7950b;
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 8px;
+      white-space: nowrap;
+      font-weight: bold;
+    }
+
+    /* 各情境 NPC 實體 */
+    .npc-actor {
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 10;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .npc-actor:hover {
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+
+    .npc-sprite {
+      font-size: 2.5rem;
+      filter: drop-shadow(0 3px 5px rgba(0,0,0,0.2));
+    }
+
+    .npc-prompt-balloon {
+      position: absolute;
+      top: -30px;
+      background: #fff;
+      border: 2px solid #e67e22;
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 0.72rem;
+      font-weight: bold;
+      color: #b9770e;
+      white-space: nowrap;
+      animation: bounce 1.2s infinite ease-in-out;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    /* 操作提示與觸控虛擬方向盤 */
+    .controls-overlay {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(0, 0, 0, 0.4);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      pointer-events: none;
+    }
+
+    .touch-pad {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      display: grid;
+      grid-template-columns: repeat(3, 44px);
+      grid-template-rows: repeat(3, 44px);
+      gap: 4px;
+      z-index: 50;
+    }
+
+    .touch-btn {
+      background: rgba(183, 149, 11, 0.7);
+      border: 2px solid #fff;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .touch-btn:active { background: #d4ac0d; }
+
+    /* 對話彈窗（NPC 請法老下令） */
+    .dialogue-modal {
+      position: absolute;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 680px;
+      background: var(--panel-bg);
+      border: 3px solid #b7950b;
+      border-radius: 20px;
+      padding: 16px 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      animation: slideUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .dialogue-modal.active { display: flex; }
+
+    @keyframes slideUp {
+      from { transform: translateX(-50%) translateY(30px); opacity: 0; }
+      to { transform: translateX(-50%) translateY(0); opacity: 1; }
+    }
+
+    .dialogue-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .dialogue-npc-avatar {
+      font-size: 2.6rem;
+      background: #fef5e7;
+      border: 2px solid #e67e22;
+      border-radius: 50%;
+      width: 54px;
+      height: 54px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .dialogue-title-box { flex: 1; }
+    .dialogue-npc-name {
+      font-size: 1.05rem;
+      font-weight: bold;
+      color: #935116;
+    }
+    .dialogue-subtitle {
+      font-size: 0.8rem;
+      color: #7f8c8d;
+    }
+
+    .dialogue-text {
+      font-size: 1.1rem;
+      line-height: 1.5;
+      color: #2c2518;
+      background: #ffffff;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid #ebd49f;
+    }
+
+    /* 法老指令二選一按鈕 */
+    .decision-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 600px) {
+      .decision-row { grid-template-columns: 1fr; }
+    }
+
+    .order-btn {
+      background: #fff;
+      border: 2px solid #b7950b;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+
+    .order-btn:hover {
+      background: #fef9e7;
+      border-color: #d35400;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .order-title {
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: #784212;
+    }
+
+    .order-hint {
+      font-size: 0.75rem;
+      color: #7f8c8d;
+    }
+
+    /* 結局全螢幕覆蓋 */
+    .ending-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(18, 9, 3, 0.95);
+      z-index: 200;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      color: #fff;
+      text-align: center;
+    }
+
+    .ending-screen.active { display: flex; }
+
+    .ending-box {
+      max-width: 540px;
+      background: #2a1a0c;
+      border: 4px solid #f1c40f;
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .ending-replay-btn {
+      background: #f1c40f;
+      color: #2c2518;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 20px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      align-self: center;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="game-console">
+    <!-- 頂部資訊 -->
+    <header>
+      <div class="pharaoh-info">
+        <span>👑 法老王名：<strong>拉美西斯·荷魯斯</strong></span>
+        <span class="age-badge" id="ageBadge">🎂 12 歲即位</span>
+        <span class="age-badge" id="yearBadge">📜 執政第 1 年</span>
+      </div>
+      <div>
+        <span>🏛️ 金字塔完工度：<strong id="pyramidPercent" style="color: #ffd700;">0%</strong></span>
+      </div>
+    </header>
+
+    <!-- 四項幸福指針 -->
+    <div class="stats-tray">
+      <div class="stat-chip" title="神明護佑 (信仰)：太低神廟不滿，太高祭司想架空法老">
+        <span class="emoji">✨</span><span>神權</span>
+        <div class="stat-progress"><div id="barFaith" class="stat-bar bar-faith" style="width: 50%;"></div></div>
+      </div>
+      <div class="stat-chip" title="百姓幸福 (民心)：過低會罷工抗議不肯拉石塊">
+        <span class="emoji">😄</span><span>民心</span>
+        <div class="stat-progress"><div id="barPeople" class="stat-bar bar-people" style="width: 55%;"></div></div>
+      </div>
+      <div class="stat-chip" title="國庫寶藏 (金幣)：買石材、發甜啤酒與工資必備">
+        <span class="emoji">💰</span><span>國庫</span>
+        <div class="stat-progress"><div id="barGold" class="stat-bar bar-gold" style="width: 55%;"></div></div>
+      </div>
+      <div class="stat-chip" title="皇家弓箭戰車軍隊：驅逐沙漠沙匪保衛疆土">
+        <span class="emoji">🛡️</span><span>軍力</span>
+        <div class="stat-progress"><div id="barArmy" class="stat-bar bar-army" style="width: 50%;"></div></div>
+      </div>
+    </div>
+
+    <!-- 走動地圖世界 -->
+    <div class="viewport-container" id="mapContainer" onclick="handleMapClick(event)">
+      <div class="palace-map"></div>
+
+      <!-- 王座台階 -->
+      <div class="throne-dais">
+        <span>👑 荷魯斯王座</span>
+        <span style="font-size: 0.7rem; opacity: 0.9;">上下埃及統治者</span>
+      </div>
+
+      <!-- 左上角：金字塔遠景露台 -->
+      <div class="pyramid-balcony" onclick="event.stopPropagation(); talkToNPC('architect')">
+        <div class="pyramid-mini-shape">
+          <div id="pyr6" class="pyr-layer pl-6 dim"></div>
+          <div id="pyr5" class="pyr-layer pl-5 dim"></div>
+          <div id="pyr4" class="pyr-layer pl-4 dim"></div>
+          <div id="pyr3" class="pyr-layer pl-3 dim"></div>
+          <div id="pyr2" class="pyr-layer pl-2 dim"></div>
+          <div id="pyr1" class="pyr-layer pl-1 dim"></div>
+        </div>
+        <div style="font-size: 0.68rem; color: #fff; font-weight: bold; margin-top: 4px; text-shadow: 0 1px 2px #000;">吉薩大金字塔</div>
+      </div>
+
+      <!-- 可移動的法老玩家本尊 -->
+      <div class="player-actor" id="playerActor" style="left: 480px; top: 120px;">
+        <div class="player-tag" id="playerTag">小法老 (你)</div>
+        <div class="player-sprite" id="playerSprite">👦</div>
+        <div class="player-shadow"></div>
+      </div>
+
+      <!-- 宮殿中的各個 NPC (分布在大殿不同角落) -->
+      <!-- 1. 皇家大宰相 -->
+      <div class="npc-actor" id="npc_vizier" style="left: 480px; top: 210px;" onclick="event.stopPropagation(); interactWith('vizier')">
+        <div class="npc-prompt-balloon">請法老下令！</div>
+        <div class="npc-sprite">📜</div>
+      </div>
+
+      <!-- 2. 金字塔總建築師 -->
+      <div class="npc-actor" id="npc_architect" style="left: 170px; top: 140px;" onclick="event.stopPropagation(); interactWith('architect')">
+        <div class="npc-prompt-balloon">敲定工程！</div>
+        <div class="npc-sprite">👷‍♂️</div>
+      </div>
+
+      <!-- 3. 阿蒙神廟大祭司 -->
+      <div class="npc-actor" id="npc_priest" style="left: 760px; top: 130px;" onclick="event.stopPropagation(); interactWith('priest')">
+        <div class="npc-prompt-balloon">占卜吉凶！</div>
+        <div class="npc-sprite">🧙‍♂️</div>
+      </div>
+
+      <!-- 4. 戰車將軍 -->
+      <div class="npc-actor" id="npc_general" style="left: 200px; top: 340px;" onclick="event.stopPropagation(); interactWith('general')">
+        <div class="npc-prompt-balloon">邊境軍報！</div>
+        <div class="npc-sprite">🏹</div>
+      </div>
+
+      <!-- 5. 尼羅河老農民 -->
+      <div class="npc-actor" id="npc_farmer" style="left: 740px; top: 340px;" onclick="event.stopPropagation(); interactWith('farmer')">
+        <div class="npc-prompt-balloon">尼羅河豐收！</div>
+        <div class="npc-sprite">🌾</div>
+      </div>
+
+      <!-- 6. 神廟黑貓使者 -->
+      <div class="npc-actor" id="npc_cat" style="left: 480px; top: 380px;" onclick="event.stopPropagation(); interactWith('cat')">
+        <div class="npc-prompt-balloon">喵～求烤魚！</div>
+        <div class="npc-sprite">🐱</div>
+      </div>
+
+      <!-- 移動操作指南提示 -->
+      <div class="controls-overlay">
+        🕹️ 鍵盤【W A S D】或【方向鍵】走路 / 點擊地板移動法老！靠近 NPC 觸發對話！
+      </div>
+
+      <!-- 手機觸控虛擬方向盤 -->
+      <div class="touch-pad">
+        <div></div>
+        <div class="touch-btn" onclick="movePlayer(0, -35)">▲</div>
+        <div></div>
+        <div class="touch-btn" onclick="movePlayer(-35, 0)">◀</div>
+        <div class="touch-btn" onclick="checkNearbyNPC()">OK</div>
+        <div class="touch-btn" onclick="movePlayer(35, 0)">▶</div>
+        <div></div>
+        <div class="touch-btn" onclick="movePlayer(0, 35)">▼</div>
+        <div></div>
+      </div>
+
+      <!-- 對話彈窗 (NPC 當面跳出，請法老定奪) -->
+      <div class="dialogue-modal" id="dialogueModal">
+        <div class="dialogue-header">
+          <div class="dialogue-npc-avatar" id="dlgAvatar">📜</div>
+          <div class="dialogue-title-box">
+            <div class="dialogue-npc-name" id="dlgSpeaker">皇家大宰相</div>
+            <div class="dialogue-subtitle" id="dlgDuty">內政總管 · 請示法老聖裁</div>
+          </div>
+        </div>
+
+        <div class="dialogue-text" id="dlgText">
+          「法老陛下！您戴上荷魯斯雙冠了！吉薩台地已準備就緒，工匠們正等著您的金字塔第一道王令！」
+        </div>
+
+        <div class="decision-row">
+          <button class="order-btn" onclick="executeDecision(0)">
+            <span class="order-title" id="btnTitle0">𓏛 敕令：立刻採石奠基！</span>
+            <span class="order-hint" id="btnHint0">【花費金幣，金字塔進度 +1】</span>
+          </button>
+          <button class="order-btn" onclick="executeDecision(1)">
+            <span class="order-title" id="btnTitle1">𓀀 敕令：先撥款分發大麥蜂蜜！</span>
+            <span class="order-hint" id="btnHint1">【民心大增，暫緩工程】</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 結局畫面 (阿努比斯冥界審判) -->
+    <div class="ending-screen" id="endingScreen">
+      <div class="ending-box">
+        <h2 id="endHeading" style="color: #f1c40f;">𓂀 阿努比斯神聖審判 𓂀</h2>
+        <div style="font-size: 3rem;" id="endIcon">⚖️</div>
+        <p id="endDetails" style="line-height: 1.6; font-size: 1.05rem;"></p>
+        <button class="ending-replay-btn" onclick="restartReign()">轉世重做新一代法老</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 玩家核心狀態
+    const player = {
+      x: 480,
+      y: 120,
+      age: 12,
+      year: 1,
+      faith: 50,
+      people: 55,
+      gold: 55,
+      army: 50,
+      pyramidLevel: 0,
+      isInteracting: false,
+      isOver: false
+    };
+
+    // NPC 設定與各自情境資料庫
+    const npcs = {
+      vizier: {
+        id: "vizier",
+        name: "📜 皇家大宰相",
+        duty: "宮廷首席總管",
+        avatar: "📜",
+        dialogues: [
+          {
+            text: "「法老陛下！國庫剛清點完畢。您即位第一年，我們要舉辦盛大的即位大典，還是把金幣存起來備戰？」",
+            opts: [
+              { title: "盛大宴席！招待全埃及平民！", hint: "【民心 +20，國庫 -15】", act: (p) => { p.people += 20; p.gold -= 15; } },
+              { title: "節省開支！儲備糧食黃金！", hint: "【國庫 +15，民心平穩】", act: (p) => { p.gold += 15; } }
+            ]
+          },
+          {
+            text: "「陛下，鄰國西台帝國派使者送來象牙與戰馬，詢問是否簽訂互不侵犯條約？」",
+            opts: [
+              { title: "同意結盟！互通商道！", hint: "【國庫 +20，軍力稍減】", act: (p) => { p.gold += 20; p.army -= 5; } },
+              { title: "嚴詞拒絕！展現埃及神威！", hint: "【軍隊威望 +20，外患增加】", act: (p) => { p.army += 20; } }
+            ]
+          }
+        ]
+      },
+      architect: {
+        id: "architect",
+        name: "👷‍♂️ 金字塔總建築師 因霍特普",
+        duty: "皇家巨石工程總監",
+        avatar: "👷‍♂️",
+        dialogues: [
+          {
+            text: "「法老陛下！我們找到了吉薩最好的白色石灰岩礦脈！但需要增加三千名工匠的甜啤酒與蒜頭口糧，才能加速運石！」",
+            opts: [
+              { title: "準奏！給予工匠最好的伙食待遇！", hint: "【金字塔進度 +1，民心 +15，國庫 -20】", act: (p) => { p.pyramidLevel = Math.min(6, p.pyramidLevel + 1); p.people += 15; p.gold -= 20; } },
+              { title: "依常規配給！不准鋪張浪費！", hint: "【省下金幣，工匠稍有疲憊】", act: (p) => { p.people -= 10; p.gold += 10; } }
+            ]
+          },
+          {
+            text: "「陛下！天頂即將封頂！我們要在最頂端鑲嵌純金打造的 Pyramidion（金冠石）嗎？這能讓靈魂直達太陽神國度！」",
+            opts: [
+              { title: "熔鑄國庫黃金！打造純金冠石！", hint: "【金字塔進度 +2，國庫 -30，信仰大增】", act: (p) => { p.pyramidLevel = Math.min(6, p.pyramidLevel + 2); p.gold -= 30; p.faith += 25; } },
+              { title: "用打磨花崗岩代替就好！", hint: "【金字塔進度 +1，節省黃金】", act: (p) => { p.pyramidLevel = Math.min(6, p.pyramidLevel + 1); p.gold += 10; } }
+            ]
+          }
+        ]
+      },
+      priest: {
+        id: "priest",
+        name: "🧙‍♂️ 阿蒙神廟大祭司",
+        duty: "太陽神最高代言人",
+        avatar: "🧙‍♂️",
+        dialogues: [
+          {
+            text: "「法老啊！昨夜太陽神拉在夢中啟示：請將底比斯南方的五百畝良田撥給神殿，供奉香料與聖牛！」",
+            opts: [
+              { title: "敬獻良田，祈求神明賜福！", hint: "【神明護佑 +25，國庫 -20】", act: (p) => { p.faith += 25; p.gold -= 20; } },
+              { title: "朕即是活著的荷魯斯神！無需中介！", hint: "【神明護佑 -25，國庫保留，王權集中】", act: (p) => { p.faith -= 25; p.gold += 15; p.people += 10; } }
+            ]
+          }
+        ]
+      },
+      general: {
+        id: "general",
+        name: "🏹 皇家戰車將軍",
+        duty: "邊境兵團大統帥",
+        avatar: "🏹",
+        dialogues: [
+          {
+            text: "「報告法老！沙漠那邊跑來一群劫掠駱駝商隊的沙匪！是否由法老親自御駕親征，鼓舞將士？」",
+            opts: [
+              { title: "穿上黃金鎧甲，親征沙漠！", hint: "【軍隊威望 +25，金幣 +15，民心振奮】", act: (p) => { p.army += 25; p.gold += 15; p.people += 10; } },
+              { title: "加強要塞防守，派副將出巡！", hint: "【軍力穩固，花費較小】", act: (p) => { p.army += 10; } }
+            ]
+          }
+        ]
+      },
+      farmer: {
+        id: "farmer",
+        name: "🌾 尼羅河老農民",
+        duty: "三角洲農耕代表",
+        avatar: "🌾",
+        dialogues: [
+          {
+            text: "「報告小法老！今年尼羅河漲水送來了超多肥沃黑土！全埃及大麥大豐收，糧倉裝不下啦！」",
+            opts: [
+              { title: "全城放假三天！舉辦烤餅歡慶大會！", hint: "【百姓民心 +25，金幣 -10】", act: (p) => { p.people += 25; p.gold -= 10; } },
+              { title: "動員農閒百姓！加速搬運金字塔石塊！", hint: "【金字塔進度 +1，國庫糧產豐盈】", act: (p) => { p.pyramidLevel = Math.min(6, p.pyramidLevel + 1); p.gold += 15; } }
+            ]
+          }
+        ]
+      },
+      cat: {
+        id: "cat",
+        name: "🐱 神廟黑貓使者",
+        duty: "巴斯特女神聖獸",
+        avatar: "🐱",
+        dialogues: [
+          {
+            text: "「喵～聖貓在法老腳邊蹭了蹭！祭司說如果陛下賞賜一車尼羅河烤魚，能保佑宮廷沒有老鼠侵害糧倉！」",
+            opts: [
+              { title: "摸摸貓頭，賞賜一整車烤魚！", hint: "【神明護佑 +20，民心 +10，金幣 -10】", act: (p) => { p.faith += 20; p.people += 10; p.gold -= 10; } },
+              { title: "給牠吃條小魚，金幣留著造金字塔！", hint: "【國庫省錢，貓貓乖乖離去】", act: (p) => { p.gold += 10; } }
+            ]
+          }
+        ]
+      }
+    };
+
+    let activeNPC = null;
+    let activeDialogue = null;
+
+    // 玩家走動邏輯
+    function movePlayer(dx, dy) {
+      if (player.isInteracting || player.isOver) return;
+
+      const container = document.getElementById('mapContainer');
+      const maxX = container.clientWidth - 30;
+      const maxY = container.clientHeight - 40;
+
+      player.x = Math.max(30, Math.min(maxX, player.x + dx));
+      player.y = Math.max(50, Math.min(maxY, player.y + dy));
+
+      const actor = document.getElementById('playerActor');
+      actor.style.left = player.x + 'px';
+      actor.style.top = player.y + 'px';
+
+      // 檢查是否走近任何 NPC
+      checkNearbyNPC();
+    }
+
+    // 點擊地圖走到點擊位置
+    function handleMapClick(e) {
+      if (player.isInteracting || player.isOver) return;
+      const rect = document.getElementById('mapContainer').getBoundingClientRect();
+      const targetX = e.clientX - rect.left;
+      const targetY = e.clientY - rect.top;
+
+      player.x = Math.max(30, Math.min(rect.width - 30, targetX));
+      player.y = Math.max(50, Math.min(rect.height - 40, targetY));
+
+      const actor = document.getElementById('playerActor');
+      actor.style.left = player.x + 'px';
+      actor.style.top = player.y + 'px';
+
+      checkNearbyNPC();
+    }
+
+    // 偵測距離碰撞
+    function checkNearbyNPC() {
+      for (let key in npcs) {
+        const el = document.getElementById('npc_' + key);
+        if (!el) continue;
+        const npcX = parseFloat(el.style.left);
+        const npcY = parseFloat(el.style.top);
+
+        const dist = Math.hypot(player.x - npcX, player.y - npcY);
+        if (dist < 55) {
+          interactWith(key);
+          return;
+        }
+      }
+    }
+
+    // 觸發與 NPC 對話
+    function interactWith(npcKey) {
+      if (player.isOver) return;
+      const npc = npcs[npcKey];
+      activeNPC = npc;
+      player.isInteracting = true;
+
+      // 隨機選一個對話情境
+      const dIndex = Math.floor(Math.random() * npc.dialogues.length);
+      activeDialogue = npc.dialogues[dIndex];
+
+      document.getElementById('dlgAvatar').innerText = npc.avatar;
+      document.getElementById('dlgSpeaker').innerText = npc.name;
+      document.getElementById('dlgDuty').innerText = npc.duty;
+      document.getElementById('dlgText').innerText = activeDialogue.text;
+
+      document.getElementById('btnTitle0').innerText = "𓏛 " + activeDialogue.opts[0].title;
+      document.getElementById('btnHint0').innerText = activeDialogue.opts[0].hint;
+
+      document.getElementById('btnTitle1').innerText = "𓀀 " + activeDialogue.opts[1].title;
+      document.getElementById('btnHint1').innerText = activeDialogue.opts[1].hint;
+
+      document.getElementById('dialogueModal').classList.add('active');
+    }
+
+    // 法老下達指令
+    function executeDecision(choiceIndex) {
+      const opt = activeDialogue.opts[choiceIndex];
+      opt.act(player);
+
+      // 法老年歲流轉 (每次定奪長大 2~3 歲)
+      player.year += 1;
+      player.age += Math.floor(Math.random() * 2) + 2;
+
+      // 關閉對話
+      document.getElementById('dialogueModal').classList.remove('active');
+      player.isInteracting = false;
+
+      // 更新畫面與檢查結局
+      updateDashboard();
+
+      if (!checkGameEndings()) {
+        // 彈開稍微一點，避免連續卡在同個 NPC 身上觸發
+        movePlayer(20, 20);
+      }
+    }
+
+    function updateDashboard() {
+      player.faith = Math.max(0, Math.min(100, player.faith));
+      player.people = Math.max(0, Math.min(100, player.people));
+      player.gold = Math.max(0, Math.min(100, player.gold));
+      player.army = Math.max(0, Math.min(100, player.army));
+
+      document.getElementById('barFaith').style.width = player.faith + '%';
+      document.getElementById('barPeople').style.width = player.people + '%';
+      document.getElementById('barGold').style.width = player.gold + '%';
+      document.getElementById('barArmy').style.width = player.army + '%';
+
+      document.getElementById('ageBadge').innerText = `🎂 ${player.age} 歲`;
+      document.getElementById('yearBadge').innerText = `📜 執政第 ${player.year} 年`;
+
+      // 角色外貌成長
+      const spriteEl = document.getElementById('playerSprite');
+      const tagEl = document.getElementById('playerTag');
+      if (player.age < 20) {
+        spriteEl.innerText = "👦";
+        tagEl.innerText = "小法老 (你)";
+      } else if (player.age < 45) {
+        spriteEl.innerText = "🤴";
+        tagEl.innerText = "英武法老 (你)";
+      } else {
+        spriteEl.innerText = "🧙‍♂️";
+        tagEl.innerText = "傳奇老法老 (你)";
+      }
+
+      // 金字塔圖層點亮
+      const pct = Math.round((player.pyramidLevel / 6) * 100);
+      document.getElementById('pyramidPercent').innerText = pct + '%';
+
+      for (let i = 1; i <= 6; i++) {
+        const layer = document.getElementById('pyr' + i);
+        if (i <= player.pyramidLevel) {
+          layer.classList.remove('dim');
+        } else {
+          layer.classList.add('dim');
+        }
+      }
+    }
+
+    function checkGameEndings() {
+      if (player.faith <= 0) {
+        triggerEnd("𓀿 信仰破滅", "阿蒙神殿祭司與信眾四散，全埃及神廟黑燈瞎火，王朝在嘆息中劃下句點。");
+        return true;
+      }
+      if (player.faith >= 100) {
+        triggerEnd("📜 祭司專權", "神廟的勢力蓋過了法老！大祭司坐上了黃金王座，小法老被請去神廟吃點心退位啦。");
+        return true;
+      }
+      if (player.people <= 0) {
+        triggerEnd("😤 工匠抗議大罷工", "工匠們放下了銅鑿與繩索，坐滿了尼羅河畔罷工，拒絕再為王室搬運任何一塊石頭！");
+        return true;
+      }
+      if (player.gold <= 0) {
+        triggerEnd("🪙 國庫空空如也", "大麥與金條花得精光，王宮守衛跑去抓魚糊口，王朝暫時宣布破產！");
+        return true;
+      }
+      if (player.army <= 0) {
+        triggerEnd("🐫 邊境沙匪侵奪", "沒有強大的皇家弓箭隊，沙漠的駱駝騎兵搶走了糧倉，你不得不率部遷徙避難。");
+        return true;
+      }
+
+      // 自然圓滿
+      if (player.age >= 68 || player.year >= 20) {
+        if (player.pyramidLevel >= 6) {
+          triggerEnd("☀️ 萬世永生 · 太陽神的夥伴！", 
+            `不可思議的成就！你在底比斯人民的盛大歡呼中安詳過完傳奇一生（享年 ${player.age} 歲）。你的大金字塔 100% 完工！純金頂石在夕陽下射出奪目光輝！阿努比斯的神聖天平稱量：你的心臟如羽毛般無瑕！你的靈魂登上太陽巡天舟，永享極樂蘆葦原！`);
+        } else {
+          triggerEnd("🏛️ 仁慈法老的安息之地", 
+            `你平靜地結束了一生的統治。金字塔雖然未能完全鑲嵌金頂，但人民永遠感念你的仁慈與歡樂！`);
+        }
+        return true;
+      }
+
+      return false;
+    }
+
+    function triggerEnd(title, details) {
+      player.isOver = true;
+      document.getElementById('endHeading').innerText = title;
+      document.getElementById('endDetails').innerText = details;
+      document.getElementById('endIcon').innerText = player.pyramidLevel >= 5 ? "👑" : "⚖️";
+      document.getElementById('endingScreen').classList.add('active');
+    }
+
+    function restartReign() {
+      player.x = 480;
+      player.y = 120;
+      player.age = 12;
+      player.year = 1;
+      player.faith = 50;
+      player.people = 55;
+      player.gold = 55;
+      player.army = 50;
+      player.pyramidLevel = 0;
+      player.isInteracting = false;
+      player.isOver = false;
+
+      document.getElementById('endingScreen').classList.remove('active');
+      document.getElementById('dialogueModal').classList.remove('active');
+
+      const actor = document.getElementById('playerActor');
+      actor.style.left = player.x + 'px';
+      actor.style.top = player.y + 'px';
+
+      updateDashboard();
+    }
+
+    // 鍵盤移動監聽
+    window.addEventListener('keydown', (e) => {
+      const step = 25;
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') movePlayer(0, -step);
+      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') movePlayer(0, step);
+      else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') movePlayer(-step, 0);
+      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') movePlayer(step, 0);
+    });
+
+    // 初始化
+    updateDashboard();
+  </script>
+</body>
+</html>
